@@ -1,0 +1,89 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.preprocessing import LabelEncoder
+
+# Check available styles and use a valid one
+available_styles = plt.style.available
+if 'seaborn-v0_8' in available_styles:
+    plt.style.use('seaborn-v0_8')
+elif 'seaborn-v0_8-darkgrid' in available_styles:
+    plt.style.use('seaborn-v0_8-darkgrid')
+elif 'seaborn' in available_styles: # Fallback to 'seaborn' if available
+    plt.style.use('seaborn')
+else:
+    print("Seaborn style not available. Using default matplotlib style.")
+
+plt.rcParams['figure.figsize'] = (12, 6)
+sns.set_palette("viridis")
+
+data = pd.read_csv("https://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.data")
+
+print(f"Dataset Shape: {data.shape}")
+print("\nMissing Values:")
+print(data.isna().sum())
+
+# Clean '?' values
+for col in data.select_dtypes(include=['object']).columns:
+    data[col] = data[col].replace('?', 'Others')
+
+# Map salary column
+if 'salary' in data.columns:
+    data['salary'] = data['salary'].map({'<=50K': 0, '>50K': 1})
+
+# Separate numerical and categorical columns
+cat_cols = data.select_dtypes(include=['object']).columns
+num_cols = data.select_dtypes(exclude=['object']).columns
+
+# Plot categorical columns
+for col in cat_cols:
+    plt.figure(figsize=(10, 5))
+    plt.subplot(1, 2, 1)
+    sns.countplot(y=col, data=data, order=data[col].value_counts().index)
+    plt.subplot(1, 2, 2)
+    (data[col].value_counts(normalize=True) * 100).plot(kind='pie', autopct='%1.1f%%')
+    plt.ylabel('')
+    plt.tight_layout()
+    plt.show()
+
+# Plot numerical columns
+for col in num_cols:
+    plt.figure(figsize=(15, 5))
+    plt.subplot(1, 3, 1)
+    sns.histplot(data[col], kde=True)
+    plt.subplot(1, 3, 2)
+    sns.boxplot(y=data[col])
+    plt.subplot(1, 3, 3)
+    sns.violinplot(y=data[col])
+    plt.tight_layout()
+    plt.show()
+
+    if 'salary' in data.columns:
+        plt.figure(figsize=(8, 4))
+        sns.boxplot(x='salary', y=col, data=data)
+        plt.show()
+
+# Plot heatmap of numerical correlations
+plt.figure(figsize=(10, 8))
+sns.heatmap(data.select_dtypes(exclude=['object']).corr(), annot=True, cmap='coolwarm', center=0)
+plt.show()
+
+# Plot age vs workclass
+if 'age' in data.columns and 'workclass' in data.columns:
+    plt.figure(figsize=(12, 6))
+    sns.boxplot(x='workclass', y='age', data=data)
+    plt.xticks(rotation=45)
+    plt.show()
+
+# Plot capital-gain vs top 10 occupations
+if 'occupation' in data.columns and 'capital-gain' in data.columns:
+    top_occupations = data['occupation'].value_counts().nlargest(10).index
+    plt.figure(figsize=(12, 6))
+    sns.boxplot(x='occupation', y='capital-gain', data=data[data['occupation'].isin(top_occupations)])
+    plt.xticks(rotation=45)
+    plt.show()
+
+# Print crosstab of education and salary
+if 'salary' in data.columns and 'education' in data.columns:
+    print(pd.crosstab(data['education'], data['salary'], margins=True, normalize='columns'))
